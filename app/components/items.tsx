@@ -1,0 +1,216 @@
+"use client"
+import * as React from "react"
+
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {  createItem,  getEnvironmentById, getItems, } from "../../backend/enviroment"
+import { DataPhones, ItemProps} from "./dataProvider"
+
+export function ItemsCreate({ setOpen }: { setOpen: (b: string | null) => void }) {
+  const {  showAlert, setItems } = DataPhones();
+  const [collaborators, setCollaborators] = React.useState([{ user: { id: '', name: '' } }]);
+  const [open, setIsOpen] = React.useState("Phone");
+
+
+  const [item, setItem] = React.useState<ItemProps>({
+    id: '',
+    itemName: '',
+    installmentPrice: '',
+    sellPrice: '',
+    type: 'Android',
+    environmentId: '',
+    boughtPrice: '',
+    text: '',
+    userId: '',
+    length: '1',
+    fixedLength: '1',
+    creator: {
+      name: ''
+    }
+  });
+  async function getPhones() {
+    const EnvId = localStorage.getItem('envId')!;
+
+      const data = await getItems(EnvId);
+      setItems(data as ItemProps[]);
+
+   
+  }
+
+
+  async function CREATE_ITEMS() {
+    if (item) {
+      if (!item.itemName.trim()) {
+        showAlert("Please enter a name", false);
+        return;
+      }
+      if (!item.boughtPrice || !item.sellPrice ) {
+        showAlert("Please add both bought and sell prices", false);
+        return;
+      }
+      
+
+
+    }
+    const EnvId = localStorage.getItem('envId');
+    item.environmentId = EnvId!;
+    const res = await createItem(item);
+    if (res instanceof Error) {
+      showAlert(res.message, false);
+      setOpen(null);
+      return;
+    }
+    if (res) {
+      showAlert("Item created successfully", true);
+      getPhones();
+    }
+
+    setItem(prev => ({
+      ...prev,
+      itemName: '',
+      sellPrice: 'Android',
+      installmentPrice: '',
+      boughtPrice: '',
+      text: '',
+      type: '',
+      userId: '',
+      length: '1',
+      fixedLength: '1',
+      creator: {
+        name: ''
+      }
+    }));
+    setOpen(null)
+    return
+  }
+  ///
+  async function getUserId() {
+    const EnvId = localStorage.getItem('envId')!;
+    const res = await getEnvironmentById({ id: EnvId });
+    // Check if res is a string (error message)
+    if (typeof res === 'string') {
+      console.log("Failed to fetch environment:", res);
+      return;
+    }
+
+    // Assuming res is now an object with the expected structure
+    if (res && 'owner' in res && Array.isArray(res.collaborators)) {
+      const formattedData = [];
+
+      // Process the owner data
+      formattedData.push({ user: { id: res.owner.id, name: res.owner.name || '' } });
+
+      // Process the collaborators data
+      res.collaborators.forEach(collab => {
+        if (collab.user) {
+          formattedData.push({ user: { id: collab.user.id, name: collab.user.name || '' } });
+        }
+      });
+      console.log(formattedData)
+
+      setCollaborators(formattedData);
+    } else {
+      console.error("Unexpected response format:", res);
+    }
+  }
+
+
+
+  React.useEffect(() => {
+    getUserId()
+  }, [])
+  return (
+    <Card className={` delay-50 min-w-[360px]`}>
+      <CardHeader>
+        <CardTitle>Create</CardTitle>
+        <CardDescription>You can create Phones & Items</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-x-2 mb-3">
+          {/* <button className={`${open == "Item" ? 'bg-blue-400 text-white ' : ''} p-2 rounded-md border hover:bg-blue-500 hover:text-white`} onClick={e => setIsOpen((e.target as HTMLButtonElement).innerText)}>FixPhone</button> */}
+          <button className={`${open == "Phone" ? 'bg-blue-400 text-white ' : ''} p-2 rounded-md border hover:bg-blue-500 hover:text-white`} onClick={e => setIsOpen((e.target as HTMLButtonElement).innerText)}>Phone</button>
+          <button className={`${open == "Items" ? 'bg-blue-400 text-white ' : ''} p-2 rounded-md border hover:bg-blue-500 hover:text-white`} onClick={e => setIsOpen((e.target as HTMLButtonElement).innerText)}>Items</button>
+        </div>
+        <form >
+
+            <div id='main' className="flex justify-between gap-x-4 w-full items-start gap-4">
+              <div className="w-full flex flex-col gap-y-3">
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="name">أسم العنصر</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, itemName: e.target.value }));
+                  }} value={item.itemName} id="name" placeholder={'Phone Name'} className="appearance-none" />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="BoughtPrice">سعر الشراء</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, boughtPrice: e.target.value }));
+
+                  }} value={item.boughtPrice} type="number" id="BoughtPrice" placeholder={'Bought Price'} className="appearance-none" />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="Price">سعر البيع</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, sellPrice: e.target.value }));
+
+                  }} value={item.sellPrice} type="number" id="Price" placeholder={'Sell Price'} className="appearance-none" />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="InstallmentPrice">سعر التقسيط</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, installmentPrice: e.target.value }));
+
+                  }} value={item.installmentPrice} type="number" id="InstallmentPrice" placeholder={'Installment Price'} className="appearance-none" />
+                </div>
+
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="Pieces">العدد الثابت</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, fixedLength: e.target.value }));
+
+                  }} value={item.fixedLength} type="number" id="Pieces" placeholder={'Pieces'} className="appearance-none" />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="Pieces">العدد</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, length: e.target.value }));
+
+                  }} value={item.length} type="number" id="Pieces" placeholder={'Pieces'} className="appearance-none" />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="Notes">ملاحضات</Label>
+                  <Input onChange={(e) => {
+                    setItem(prev => ({ ...prev, text: e.target.value }));
+
+                  }} value={item.text} type="text" id="Notes" placeholder={'Notes'} className="appearance-none" />
+                </div>
+
+              </div>
+            </div>
+          
+         
+        </form>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={() => setOpen(null)}>Cancel</Button>
+        <Button onClick={() => open === 'Items' ? CREATE_ITEMS() : ''}>Create</Button>
+      </CardFooter>
+    </Card>
+  );
+}
