@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 
 import { createItem, getEnvironmentById, getItems } from "../../backend/enviroment"
 import { DataPhones, ItemProps } from "./dataProvider"
+import Image from "next/image"
 
 export function ItemsCreate({ setOpen }: { setOpen: (b: string | null) => void }) {
   const { showAlert, setItems } = DataPhones();
@@ -302,7 +303,7 @@ export function ItemsCreate({ setOpen }: { setOpen: (b: string | null) => void }
                 />
                 {imagePreview && (
                   <div className="mt-2">
-                    <img 
+                    <Image
                       src={imagePreview} 
                       alt="Preview" 
                       className="w-20 h-20 object-cover rounded-md border"

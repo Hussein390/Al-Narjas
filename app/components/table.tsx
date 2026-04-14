@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect,  useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Table,
   TableBody,
@@ -32,6 +32,40 @@ type UpdateState = {
   buyerNumber?: string;
 };
 
+// Add these interfaces to replace 'any'
+interface UpdateItemObject {
+  environmentId: string;
+  id: string;
+  length?: string;
+  fixedLength?: string;
+  sellPrice?: string;
+  boughtPrice?: string;
+  installmentPrice?: string;
+  text?: string;
+  location?: string;
+  image?: string;
+  buyerName?: string;
+  buyerNumber?: string;
+}
+
+interface DeleteItemObject {
+  environmentId: string;
+  id: string;
+}
+
+interface EnvironmentResponse {
+  owner: {
+    id: string;
+    name: string;
+  };
+  collaborators: Array<{
+    user: {
+      id: string;
+      name: string;
+    }
+  }>;
+}
+
 export default function Tables() {
   const { showAlert, search, items, setItems } = DataPhones();
   const [open, setOpen] = useState<{ [key: number]: boolean }>({});
@@ -41,9 +75,6 @@ export default function Tables() {
   const [isUpdate, setIsUpdate] = useState<{ [key: number]: boolean }>({});
   const [update, setUpdate] = useState<UpdateState>({});
 
-
-
-  
   async function getUserId() {
     const EnvId = localStorage.getItem('envId')!;
     const res = await getEnvironmentById({ id: EnvId });
@@ -52,10 +83,10 @@ export default function Tables() {
       return;
     }
 
-    if (res && 'owner' in res && Array.isArray(res.collaborators)) {
+    if (res && 'owner' in res && Array.isArray((res as EnvironmentResponse).collaborators)) {
       const formattedData = [];
-      formattedData.push({ user: { id: res.owner.id, name: res.owner.name || '' } });
-      res.collaborators.forEach(collab => {
+      formattedData.push({ user: { id: (res as EnvironmentResponse).owner.id, name: (res as EnvironmentResponse).owner.name || '' } });
+      (res as EnvironmentResponse).collaborators.forEach(collab => {
         if (collab.user) {
           formattedData.push({ user: { id: collab.user.id, name: collab.user.name || '' } });
         }
@@ -121,7 +152,7 @@ export default function Tables() {
       return;
     }
 
-    const object: any = {
+    const object: UpdateItemObject = {
       environmentId: EnvId,
       id: item.id,
     };
@@ -169,7 +200,7 @@ export default function Tables() {
     if (currentItem && Number(currentItem.length) >= 1) {
       showAlert('Item sold', true);
 
-      const object = {
+      const object: UpdateItemObject = {
         environmentId: EnvId,
         id: item.id,
         length: update.length,
@@ -212,7 +243,7 @@ export default function Tables() {
       return;
     }
 
-    const object: any = {
+    const object: DeleteItemObject = {
       environmentId: EnvId,
       id: item.id,
     };
@@ -220,8 +251,6 @@ export default function Tables() {
     setOpen(prev => ({ ...prev, [index]: false }))
     await GetItems()
   }
-  
-  
   
   return (
     <div className='lg:w-[1200px] mb-4 lg:mb-0 lg:mr-7 grid grid-cols-1'>
@@ -235,74 +264,32 @@ export default function Tables() {
             <Image 
               src={selectedImage} 
               alt="Preview" 
+              width={800}
+              height={600}
               className="max-w-full max-h-[85vh] object-contain rounded-lg"
             />
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* <div className="flex items-center gap-x-2 mb-3">
-        <div className="md:ml-12">
-          <Select
-            value={ownerID}
-            onValueChange={(value) => {
-              setOwnerID(value!);
-              localStorage.setItem("chosen", value!);
-            }}>
-            <SelectTrigger id="framework">
-              <SelectValue placeholder="أختر" />
-            </SelectTrigger>
-            <SelectContent>
-              {(() => {
-                if (!collaborators || collaborators.length === 0) {
-                  return <SelectItem value="IOS">No Collaborators</SelectItem>;
-                }
-
-                const filtered = collaborators.filter(
-                  (user, index, self) =>
-                    index === self.findIndex(u => u.user.id === user.user.id)
-                );
-                return (<>
-                  {
-                    filtered.map(item => (
-                      <SelectItem
-                        className="cursor-pointer"
-                        key={item.user.id}
-                        value={item.user.id || "حمودي الخزعلي"}
-                      >
-                        {item.user.name}
-                      </SelectItem>
-                    ))}
-                  <SelectItem
-                    value='all-users'
-                    className="cursor-pointer"
-                    key={"all-users"}>ALL</SelectItem>
-                </>)
-              })()}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-       */}
       <div className='mx-auto max-h-[650px] overflow-y-auto relative w-full' style={{ scrollbarWidth: 'none' }}>
         <div className='w-full font-sans font-semibold '>
           <Table>
             <TableHeader>
               <TableRow className='border-b border-b-black'>
-  <TableHead className="w-fit">Count</TableHead>
-  <TableHead className="w-fit">اسم العنصر</TableHead>
-   <TableHead>اسم المشتري</TableHead>
-  <TableHead>رقم المشتري</TableHead>
-  <TableHead>سعر الشراء</TableHead>
-  <TableHead>سعر البيع</TableHead>
-
-  <TableHead>العدد الثابت</TableHead>
-  <TableHead>العدد</TableHead>
-  <TableHead>ملاحظه</TableHead>
-   <TableHead>الموقع</TableHead>
-  <TableHead>الصورة</TableHead>
-  <TableHead>التاريخ</TableHead>
-</TableRow>
+                <TableHead className="w-fit">Count</TableHead>
+                <TableHead className="w-fit">اسم العنصر</TableHead>
+                <TableHead>اسم المشتري</TableHead>
+                <TableHead>رقم المشتري</TableHead>
+                <TableHead>سعر الشراء</TableHead>
+                <TableHead>سعر البيع</TableHead>
+                <TableHead>العدد الثابت</TableHead>
+                <TableHead>العدد</TableHead>
+                <TableHead>ملاحظه</TableHead>
+                <TableHead>الموقع</TableHead>
+                <TableHead>الصورة</TableHead>
+                <TableHead>التاريخ</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
               {Array.isArray(items) && items.length >= 1 && (
@@ -326,21 +313,17 @@ export default function Tables() {
                       {/* Buyer Name */}
                       <TableCell className="font-sans text-orange-700 font-semibold">
                         {item.buyerName || '-'}
-                    
                       </TableCell>
                       
                       {/* Buyer Number */}
                       <TableCell className="font-sans font-semibold">
                         {item.buyerNumber || '-'}
-                        
                       </TableCell>
                       <TableCell className='text-blue-600'>{item.boughtPrice}</TableCell>
                       <TableCell className="font-sans font-semibold text-green-600">
                         {item.sellPrice}
                         {isUpdate[index] && <input value={update.sellPrice} onChange={(e) => setUpdate(prev => ({ ...prev, sellPrice: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />}
                       </TableCell>
-                      
-                     
                       
                       <TableCell className="font-sans font-semibold text-yellow-600">
                         {item.fixedLength}
@@ -354,7 +337,7 @@ export default function Tables() {
                         {isUpdate[index] && <input value={update.text} onChange={(e) => setUpdate(prev => ({ ...prev, text: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />}
                       </TableCell>
                       
-                       {/* Location Cell - Click to open in Google Maps */}
+                      {/* Location Cell - Click to open in Google Maps */}
                       <TableCell className="font-sans font-semibold">
                         {item.location ? (
                           <button
@@ -362,12 +345,11 @@ export default function Tables() {
                             className="text-blue-500 hover:text-blue-700 underline flex items-center gap-1"
                             title="Click to open in Google Maps"
                           >
-                            📍 {item.location.length > 20 ? item.location.substring(0, 15     ) + '...' : item.location}
+                            📍 {item.location.length > 20 ? item.location.substring(0, 15) + '...' : item.location}
                           </button>
                         ) : (
                           <span className="text-gray-400">No location</span>
                         )}
-                        
                       </TableCell>
                       
                       {/* Image Cell - Click to open modal */}
@@ -383,7 +365,6 @@ export default function Tables() {
                         ) : (
                           <span className="text-gray-400">No image</span>
                         )}
-                        
                       </TableCell>
                       
                       <TableCell>

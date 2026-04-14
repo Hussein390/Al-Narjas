@@ -24,7 +24,7 @@ export default function Search() {
     setItems(items as ItemProps[]);
     
   }
-
+useEffect(() => {
   async function getEnvirnoment() {
     if (!name || name === '' || name === ' ') {
       setEnvironments([])
@@ -48,9 +48,9 @@ export default function Search() {
     }
   }
 
-  useEffect(() => {
+  
     getEnvirnoment();
-  }, [name, getEnvirnoment]);
+  }, [name]);
 
   return (
     <div className="mt-1 relative">
