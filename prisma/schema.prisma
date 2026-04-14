@@ -17,6 +17,10 @@ model Item {
   type             String
   length           String?
   fixedLength      String?
+  buyerName String
+  buyerNumber String
+  image String?
+  location String?
 
   environmentId String      @db.ObjectId
   creatorId     String?     @db.ObjectId

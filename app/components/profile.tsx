@@ -1,7 +1,7 @@
 "use client"
 import { signIn, signOut } from "next-auth/react"
-import { Menubar, MenubarContent, MenubarItem, MenubarMenu } from "@/components/ui/menubar";
-import { MenubarTrigger } from "@radix-ui/react-menubar";
+import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from "@/components/ui/menubar";
+// import { MenubarTrigger } from "@radix-ui/react-menubar";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 export default function Profile() {

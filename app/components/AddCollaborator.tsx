@@ -71,7 +71,7 @@ export function AddCollaborator({ setIsOpen }: { setIsOpen: (b: string | null) =
             </div>
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="framework">Role</Label>
-              <Select value={role || "VIEWER"} onValueChange={e => setRole(e)}>
+              <Select value={role || "VIEWER"} onValueChange={e => setRole(e!)}>
                 <SelectTrigger id="framework">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>

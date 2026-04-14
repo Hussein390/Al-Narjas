@@ -21,7 +21,7 @@ export default function Header() {
       <div className="flex items-center gap-x-3">
         <button className="p-2 border  hover:bg-blue-400 hover:text-white rounded-md delay-100" onClick={() => { setIsOpen("item") }}>Create Phone</button>
 
-        < button className="p-2 border hidden md:flex hover:bg-blue-400 hover:text-white   rounded-md delay-100" onClick={() => { router.push('/environment') }}>Environment</button>
+        < button className="p-2 border hidden md:flex hover:bg-blue-400 hover:text-white   rounded-md delay-100" onClick={() => { router.push('/enviroment') }}>Environment</button>
       </div>
 
       {isOpen === "item" && <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-white z-30"><ItemsCreate setOpen={setIsOpen} /></div>}

@@ -6,7 +6,6 @@ type envirnomentProps = {
   id: string;
   name: string;
   owner: { name: string };
-  collaborators: any
 };
 
 export default function Search() {
@@ -51,7 +50,7 @@ export default function Search() {
 
   useEffect(() => {
     getEnvirnoment();
-  }, [name]);
+  }, [name, getEnvirnoment]);
 
   return (
     <div className="mt-1 relative">

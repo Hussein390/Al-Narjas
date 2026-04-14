@@ -58,7 +58,6 @@ export async function getEnvironment({name}: {name: string}) {
       where: {
         name: { contains: name.trim(), mode: 'insensitive' },
       }, include: {
-        phones: true,
         items: true,
         collaborators: true,
         owner: true
@@ -89,11 +88,6 @@ export async function getEnvironmentById({id}: {id: string}) {
         id,
       },
       include: {
-          phones: {
-            orderBy: {
-              createdAt: "desc",
-            },
-        },
         items: {
           orderBy: {
             createdAt: "desc",
@@ -131,7 +125,6 @@ export async function deleteEnvironment({id}: {id: string}) {
         id,
       },
       include: {
-        phones: true,
         items: true,
         collaborators: true,
         accessEmails: true,
@@ -155,15 +148,18 @@ export type createItemProps = {
   itemName :   string
   type: string
   text?: string
+  location?: string,
+  image?: string,
+  buyerName: string,
+  buyerNumber: string,
   userId?: string
   length: string
   fixedLength?: string,
   sellPrice:  string
   boughtPrice: string
-  installmentPrice: string
   environmentId: string
 }
-export async function createItem({itemName, type, environmentId, sellPrice, boughtPrice, text, installmentPrice, length, fixedLength, userId}: createItemProps) {
+export async function createItem({itemName, type, environmentId, sellPrice, boughtPrice, text, length, fixedLength, image, location, buyerName, buyerNumber, userId}: createItemProps) {
   try {    
     const session = await auth();
   
@@ -202,10 +198,12 @@ export async function createItem({itemName, type, environmentId, sellPrice, boug
         text: text || "",
         length: length,
         fixedLength,
-        
+        buyerName,
+        buyerNumber,
+        location,
+        image,
         sellPrice: sellPrice,
         boughtPrice: boughtPrice,
-        installmentPrice: installmentPrice,
         type,
         environmentId,
         creatorId: userId || environment.ownerId,
@@ -259,18 +257,21 @@ export async function getItems(environmentId: string) {
       return "Access Denied: You are not authorized to view this data.";
     }
 
-    // Fetch the phones if the user is authorized
-    const phones = await db.item.findMany({
+    // Fetch the item if the user is authorized
+    const item = await db.item.findMany({
       where: {
         environmentId,
       },
       orderBy: {
         createdAt: 'desc',
       },
+      include:{
+        creator: true,
+      }
     });
 
     ;
-    return phones;
+    return item;
   } catch (err: unknown) {
     if (err instanceof Error) return "Error----" + err.message;
     else return "Unknown Error occurred";
@@ -315,7 +316,7 @@ export async function updateItem({
     if (length !== undefined && length !== "") data.length = String(length);
     if (fixedLength !== undefined && fixedLength !== "") data.fixedLength = String(fixedLength);
     
-    const phones = await db.item.update({
+    const item = await db.item.update({
       where: {
         id,
         environmentId,
@@ -324,7 +325,7 @@ export async function updateItem({
     });
 
     
-    return phones
+    return item
   } catch (err: unknown) {
     if (err instanceof Error) return ("Error----" + err.message)
     else return "Unknown Error occurred"
@@ -343,14 +344,14 @@ export async function deleteItem({ environmentId, id}: { environmentId: string, 
         return ("User Not Found");
     }
 
-    const phones = await db.item.delete({
+    const item = await db.item.delete({
       where: {
         id,
         environmentId,
       },
     });
 
-    return phones
+    return item
   } catch (err: unknown) {
     if (err instanceof Error) return ("Error----" + err.message)
     else return "Unknown Error occurred"

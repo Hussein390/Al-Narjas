@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect,  useState } from 'react'
 import {
   Table,
   TableBody,
@@ -8,11 +8,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { deleteItem, getEnvironmentById, getItems,  updateItem} from '../../backend/enviroment'
-import { DataPhones, ItemProps} from './dataProvider'
-import { useRouter } from 'next/navigation'
+import { deleteItem, getEnvironmentById, getItems, updateItem } from '../../backend/enviroment'
+import { DataPhones, ItemProps } from './dataProvider'
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import Image from 'next/image'
 
 type UpdateState = {
   length?: string;
@@ -21,61 +26,48 @@ type UpdateState = {
   text?: string;
   boughtPrice?: string;
   installmentPrice?: string;
+  location?: string;
+  image?: string;
+  buyerName?: string;
+  buyerNumber?: string;
 };
+
 export default function Tables() {
-  const { showAlert, search,  items, setItems } = DataPhones();
-  const router = useRouter()
+  const { showAlert, search, items, setItems } = DataPhones();
   const [open, setOpen] = useState<{ [key: number]: boolean }>({});
-  const [allItemsMoney, setAllItemsMoney] = useState<{sellPrice: number, installmentsPrice: number, boughtPrice: number}>({sellPrice: 0, boughtPrice: 0,installmentsPrice:0});
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>('');
 
   const [isUpdate, setIsUpdate] = useState<{ [key: number]: boolean }>({});
   const [update, setUpdate] = useState<UpdateState>({});
-  const USER = typeof window !== "undefined"
-    ? localStorage.getItem("chosen")
-    : null;
 
 
-  // Get Collaborators
-  const [ownerID, setOwnerID] = useState<string>('')
-  const [collaborators, setCollaborators] = useState<{ user: { id: string, name: string | null } }[] | null>(null)
+
+  
   async function getUserId() {
     const EnvId = localStorage.getItem('envId')!;
     const res = await getEnvironmentById({ id: EnvId });
-    // Check if res is a string (error message)
     if (typeof res === 'string') {
       showAlert("Failed to fetch environment:" + res, false);
       return;
     }
 
-    // Assuming res is now an object with the expected structure
     if (res && 'owner' in res && Array.isArray(res.collaborators)) {
       const formattedData = [];
-
-      // Process the owner data
       formattedData.push({ user: { id: res.owner.id, name: res.owner.name || '' } });
-
-      // Process the collaborators data
       res.collaborators.forEach(collab => {
         if (collab.user) {
           formattedData.push({ user: { id: collab.user.id, name: collab.user.name || '' } });
         }
       });
-      setCollaborators(formattedData);
     } else {
       console.error("Unexpected response format:", res);
     }
   }
+  
   React.useEffect(() => {
     getUserId()
   }, [])
-
-
-
-
-
-
-
-
 
   // get Items
   async function GetItems() {
@@ -84,15 +76,44 @@ export default function Tables() {
       console.error('Environment ID is missing!');
       return;
     }
-      const data = await getItems(EnvId);
-      setItems(data as ItemProps[]);
+    const data = await getItems(EnvId);
+    setItems(data as ItemProps[]);
   }
 
   useEffect(() => {
     GetItems();
-  }, [setItems]);
+  }, [setItems, GetItems]);
 
-  // Upate an Item
+  // Open location in Google Maps
+  const openLocationInMaps = (location: string) => {
+    if (!location) {
+      showAlert("No location available", false);
+      return;
+    }
+    // Check if it's coordinates (latitude, longitude)
+    const isCoordinates = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(location);
+    let mapsUrl;
+    
+    if (isCoordinates) {
+      mapsUrl = `https://www.google.com/maps?q=${location}`;
+    } else {
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+    }
+    
+    window.open(mapsUrl, '_blank');
+  };
+
+  // Open image in modal
+  const openImageModal = (imageUrl: string) => {
+    if (!imageUrl) {
+      showAlert("No image available", false);
+      return;
+    }
+    setSelectedImage(imageUrl);
+    setImageModalOpen(true);
+  };
+
+  // Update an Item
   async function UpdateItem(item: { id: string }, index: number) {
     const EnvId = localStorage.getItem('envId');
     if (!EnvId) {
@@ -111,6 +132,10 @@ export default function Tables() {
     if (update.boughtPrice !== undefined) object.boughtPrice = update.boughtPrice;
     if (update.installmentPrice !== undefined) object.installmentPrice = update.installmentPrice;
     if (update.text !== undefined) object.text = update.text;
+    if (update.location !== undefined) object.location = update.location;
+    if (update.image !== undefined) object.image = update.image;
+    if (update.buyerName !== undefined) object.buyerName = update.buyerName;
+    if (update.buyerNumber !== undefined) object.buyerNumber = update.buyerNumber;
 
     const result = await updateItem(object);
 
@@ -126,10 +151,11 @@ export default function Tables() {
           : i
       )
     );
-    
-    setUpdate({ });
+
+    setUpdate({});
   }
-  // But an Item
+  
+  // Buy an Item
   async function BuyItem(item: { id: string }, index: number) {
     const EnvId = localStorage.getItem('envId');
 
@@ -148,11 +174,14 @@ export default function Tables() {
         id: item.id,
         length: update.length,
         fixedLength: update.fixedLength,
-        
         sellPrice: update.sellPrice,
         boughtPrice: update.boughtPrice,
         text: update.text,
-        installmentPrice: update.installmentPrice
+        installmentPrice: update.installmentPrice,
+        location: update.location,
+        image: update.image,
+        buyerName: update.buyerName,
+        buyerNumber: update.buyerNumber
       };
 
       await updateItem(object);
@@ -191,44 +220,55 @@ export default function Tables() {
     setOpen(prev => ({ ...prev, [index]: false }))
     await GetItems()
   }
-  useEffect(() => {
-    if (USER) setOwnerID(USER);
-  }, [USER]);
+  
+  
+  
   return (
     <div className='lg:w-[1200px] mb-4 lg:mb-0 lg:mr-7 grid grid-cols-1'>
-      <div className="flex items-center gap-x-2 mb-3">
+      {/* Image Modal */}
+      <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] w-auto h-auto p-0 bg-black/90">
+          <DialogHeader>
+            <DialogTitle className="text-white sr-only">Image Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center p-4">
+            <Image 
+              src={selectedImage} 
+              alt="Preview" 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
-
+      {/* <div className="flex items-center gap-x-2 mb-3">
         <div className="md:ml-12">
           <Select
             value={ownerID}
             onValueChange={(value) => {
-              setOwnerID(value);
-              localStorage.setItem("chosen", value);
+              setOwnerID(value!);
+              localStorage.setItem("chosen", value!);
             }}>
             <SelectTrigger id="framework">
               <SelectValue placeholder="أختر" />
             </SelectTrigger>
-            <SelectContent >
+            <SelectContent>
               {(() => {
                 if (!collaborators || collaborators.length === 0) {
                   return <SelectItem value="IOS">No Collaborators</SelectItem>;
                 }
 
-                // Create a unique filtered list
                 const filtered = collaborators.filter(
                   (user, index, self) =>
                     index === self.findIndex(u => u.user.id === user.user.id)
                 );
-                // Render SelectItems
                 return (<>
                   {
                     filtered.map(item => (
-
                       <SelectItem
                         className="cursor-pointer"
                         key={item.user.id}
-                        value={item.user.id || "كرار امير2"}
+                        value={item.user.id || "حمودي الخزعلي"}
                       >
                         {item.user.name}
                       </SelectItem>
@@ -242,32 +282,30 @@ export default function Tables() {
             </SelectContent>
           </Select>
         </div>
- 
-       
-  
-        
       </div>
-      <div className=' mx-auto max-h-[650px] overflow-y-auto relative w-full' style={{ scrollbarWidth: 'none' }}>
-        
+       */}
+      <div className='mx-auto max-h-[650px] overflow-y-auto relative w-full' style={{ scrollbarWidth: 'none' }}>
         <div className='w-full font-sans font-semibold '>
-
-          < Table >
+          <Table>
             <TableHeader>
               <TableRow className='border-b border-b-black'>
-                <TableHead className="w-fit">Count</TableHead>
-                <TableHead className="w-fit">Item Name</TableHead>
-                <TableHead>Bought Price</TableHead>
-                <TableHead>Sell Price</TableHead>
-                <TableHead>Installment Price</TableHead>
-                <TableHead>Fixed Length</TableHead>
-                <TableHead>Length</TableHead>
-                <TableHead>Text</TableHead>
-                <TableHead >Date</TableHead>
-                <TableHead className="text-right">Owned</TableHead>
-              </TableRow>
+  <TableHead className="w-fit">Count</TableHead>
+  <TableHead className="w-fit">اسم العنصر</TableHead>
+   <TableHead>اسم المشتري</TableHead>
+  <TableHead>رقم المشتري</TableHead>
+  <TableHead>سعر الشراء</TableHead>
+  <TableHead>سعر البيع</TableHead>
+
+  <TableHead>العدد الثابت</TableHead>
+  <TableHead>العدد</TableHead>
+  <TableHead>ملاحظه</TableHead>
+   <TableHead>الموقع</TableHead>
+  <TableHead>الصورة</TableHead>
+  <TableHead>التاريخ</TableHead>
+</TableRow>
             </TableHeader>
-            <TableBody >
-              {Array.isArray(items) && items.length >= 1 ? (
+            <TableBody>
+              {Array.isArray(items) && items.length >= 1 && (
                 items
                   .filter((task) => {
                     const name =
@@ -282,22 +320,30 @@ export default function Tables() {
 
                     return name && type;
                   }).map((item, index) => (
-
                     <TableRow className="cursor-pointer select-none text-center" onDoubleClick={() => setOpen(prev => ({ ...prev, [index]: !prev[index] }))} key={index}>
                       <TableCell className="font-medium w-3">{index + 1}</TableCell>
                       <TableCell className="font-medium text-left">{item.itemName}</TableCell>
+                      {/* Buyer Name */}
+                      <TableCell className="font-sans text-orange-700 font-semibold">
+                        {item.buyerName || '-'}
+                    
+                      </TableCell>
+                      
+                      {/* Buyer Number */}
+                      <TableCell className="font-sans font-semibold">
+                        {item.buyerNumber || '-'}
+                        
+                      </TableCell>
                       <TableCell className='text-blue-600'>{item.boughtPrice}</TableCell>
                       <TableCell className="font-sans font-semibold text-green-600">
                         {item.sellPrice}
                         {isUpdate[index] && <input value={update.sellPrice} onChange={(e) => setUpdate(prev => ({ ...prev, sellPrice: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />}
                       </TableCell>
-                      <TableCell className="font-sans font-semibold text-red-600">
-                        {item.installmentPrice}
-                        {isUpdate[index] && <input value={update.installmentPrice} onChange={(e) => setUpdate(prev => ({ ...prev, installmentPrice: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />}
-                      </TableCell>
+                      
+                     
+                      
                       <TableCell className="font-sans font-semibold text-yellow-600">
                         {item.fixedLength}
-                        {/* {isUpdate[index] && <input value={update.fixedLength} onChange={(e) => setUpdate(prev => ({ ...prev, fixedLength: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />} */}
                       </TableCell>
                       <TableCell className="font-sans font-semibold">
                         {item.length}
@@ -305,40 +351,87 @@ export default function Tables() {
                       </TableCell>
                       <TableCell className="font-sans font-semibold text-blue-600">
                         {item.text}
-                        {isUpdate[index] && <input  value={update.text} onChange={(e) => setUpdate(prev => ({ ...prev, text: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />}
+                        {isUpdate[index] && <input value={update.text} onChange={(e) => setUpdate(prev => ({ ...prev, text: e.target.value }))} type="text" className='rounded-full ml-2 p-2 h-7 w-14 border-slate-400 border' />}
                       </TableCell>
-                      <TableCell >
+                      
+                       {/* Location Cell - Click to open in Google Maps */}
+                      <TableCell className="font-sans font-semibold">
+                        {item.location ? (
+                          <button
+                            onClick={() => openLocationInMaps(item.location!)}
+                            className="text-blue-500 hover:text-blue-700 underline flex items-center gap-1"
+                            title="Click to open in Google Maps"
+                          >
+                            📍 {item.location.length > 20 ? item.location.substring(0, 15     ) + '...' : item.location}
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">No location</span>
+                        )}
+                        
+                      </TableCell>
+                      
+                      {/* Image Cell - Click to open modal */}
+                      <TableCell className="font-sans font-semibold">
+                        {item.image ? (
+                          <button
+                            onClick={() => openImageModal(item.image!)}
+                            className="text-green-500 hover:text-green-700 underline flex items-center gap-1"
+                            title="Click to view image"
+                          >
+                            🖼️ View Image
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">No image</span>
+                        )}
+                        
+                      </TableCell>
+                      
+                      <TableCell>
                         {item.createdAt ? item.createdAt.toLocaleDateString('en-CA').replaceAll('-', '/') : 'N/A'}
                       </TableCell>
-                      <TableCell className="text-right select-none">{item.creator ? item.creator.name : 'Hussein'}</TableCell>
-                      {open[index] && <TableCell className="flex gap-x-3 items-center m-0">
-                        <button onClick={() => {
-                          setOpen(prev => ({ ...prev, [index]: false }))
-                          setIsUpdate(prev => ({ ...prev, [index]: !prev[index] }))
-                        }} className=" bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600">
-                          Edit
-                        </button>
-                        <button onClick={() => DeletItem(item, index)} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
-                          Delete
-                        </button>
-                        <button onClick={() => BuyItem(item, index)} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600">
-                          Buy
-                        </button>
-                      </TableCell>}
-                      {isUpdate[index] && <TableCell className="flex gap-x-3 items-center m-0">
-                        <button onClick={() => {
-                          UpdateItem(item, index)
-                          setIsUpdate(prev => ({ ...prev, [index]: false }))
-                        }} className=" bg-green-500 text-white p-2 rounded-full hover:bg-green-600">
-                          Save
-                        </button>
-                        <button onClick={() => setIsUpdate(prev => ({ ...prev, [index]: false }))} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
-                          Cancel
-                        </button>
-                      </TableCell>}
+                      
+                      {open[index] && (
+                        <TableCell className="flex gap-x-3 items-center m-0">
+                          <button onClick={() => {
+                            setOpen(prev => ({ ...prev, [index]: false }))
+                            setIsUpdate(prev => ({ ...prev, [index]: !prev[index] }))
+                            // Set current values for editing
+                            setUpdate({
+                              length: item.length,
+                              sellPrice: item.sellPrice,
+                              text: item.text,
+                              location: item.location,
+                              image: item.image,
+                              buyerName: item.buyerName,
+                              buyerNumber: item.buyerNumber
+                            })
+                          }} className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600">
+                            Edit
+                          </button>
+                          <button onClick={() => DeletItem(item, index)} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                            Delete
+                          </button>
+                          <button onClick={() => BuyItem(item, index)} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600">
+                            Buy
+                          </button>
+                        </TableCell>
+                      )}
+                      {isUpdate[index] && (
+                        <TableCell className="flex gap-x-3 items-center m-0">
+                          <button onClick={() => {
+                            UpdateItem(item, index)
+                            setIsUpdate(prev => ({ ...prev, [index]: false }))
+                          }} className="bg-green-500 text-white p-2 rounded-full hover:bg-green-600">
+                            Save
+                          </button>
+                          <button onClick={() => setIsUpdate(prev => ({ ...prev, [index]: false }))} className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                            Cancel
+                          </button>
+                        </TableCell>
+                      )}
                     </TableRow>
-                  )))
-                : <p className='text-center mt-3'>No items found</p>}
+                  ))
+              )}
             </TableBody>
           </Table>
         </div>

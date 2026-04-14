@@ -9,9 +9,12 @@ export type ItemProps = {
   itemName: string;
   sellPrice: string;
   boughtPrice: string;
-  installmentPrice?: string;
   text?: string;
+  location?: string,
+  image?: string,
   type: string;
+  buyerName: string;
+  buyerNumber: string;
   createdAt?: Date;
   environmentId: string;
   userId?: string;
